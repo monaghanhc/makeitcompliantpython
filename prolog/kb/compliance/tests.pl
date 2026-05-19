@@ -27,7 +27,7 @@ test(required_obligations_mit) :-
 
 test(explain_incompatibility_nonempty) :-
     explain_incompatibility(mit, gpl_3_0, Explanation),
-    string(Explanation),
-    Explanation \= ''.
+    atom(Explanation),
+    Explanation \== ''.
 
 :- end_tests(compliance_rules).
