@@ -1,4 +1,4 @@
-"""Legacy entry point — launches the refactored wxPython application."""
+"""Desktop application entry point."""
 
 from makeitcompliant.app.gui.wx_app import main
 

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Make It Compliant</title>
+  <link rel="stylesheet" href="site.css" />
+</head>
+<body>
+  <header>
+    <h1>Make It Compliant</h1>
+    <p class="tagline">Software license compliance analysis — ML detection + Prolog reasoning</p>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#demo">SPDX Demo</a>
+      <a href="#desktop">Desktop app</a>
+      <a href="https://github.com/monaghanhc/makeitcompliantpython">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h2>Understand licenses before you ship</h2>
+      <p>Scan projects, classify license text, reason over compatibility with SWI-Prolog, and export compliance reports.</p>
+      <p class="note"><strong>GitHub Pages demo:</strong> client-side SPDX detection only. Full analysis requires the desktop app (Python + SWI-Prolog).</p>
+    </section>
+
+    <section id="features">
+      <h2>Features</h2>
+      <ul>
+        <li>Project folder scanner (LICENSE, manifests, headers)</li>
+        <li>TF-IDF + SPDX license detection with confidence tiers</li>
+        <li>Prolog rules: families, obligations, compatibility, risk</li>
+        <li>Explainable issues and recommendations</li>
+        <li>JSON / Markdown report export</li>
+      </ul>
+    </section>
+
+    <section id="demo">
+      <h2>SPDX demo (browser)</h2>
+      <p>Paste license text or an SPDX line:</p>
+      <textarea id="licenseInput" rows="8" placeholder="SPDX-License-Identifier: MIT"></textarea>
+      <button id="detectBtn">Detect license</button>
+      <pre id="demoResult"></pre>
+    </section>
+
+    <section id="desktop">
+      <h2>Full desktop analysis</h2>
+      <pre><code>pip install -r requirements.txt
+python -m makeitcompliant.app.main</code></pre>
+      <p>Build Windows .exe: <code>.\scripts\build_windows.ps1</code></p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Automated assistance only — not legal advice.</p>
+  </footer>
+  <script src="demo.js"></script>
+</body>
+</html>

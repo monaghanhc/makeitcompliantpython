@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "makeitcompliant"
+version = "0.2.0"
+description = "Software license compliance analysis (desktop + knowledge base)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "wxPython>=4.2",
+    "nltk>=3.8",
+    "scikit-learn>=1.2",
+    "swiplserver>=1.0",
+    "eel>=0.16",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "ruff>=0.1",
+]
+
+[project.scripts]
+makeitcompliant = "makeitcompliant.app.main:main"
+makeitcompliant-web = "makeitcompliant.app.eel_main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["makeitcompliant*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]

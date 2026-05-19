@@ -1,0 +1,10 @@
+body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 1rem 1.5rem; line-height: 1.5; color: #1a1a1a; }
+header { border-bottom: 1px solid #ddd; margin-bottom: 2rem; }
+.tagline { color: #555; }
+nav a { margin-right: 1rem; }
+.hero { background: #f4f6f8; padding: 1.25rem; border-radius: 8px; }
+.note { font-size: 0.9rem; color: #444; }
+textarea { width: 100%; font-family: inherit; }
+button { margin-top: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; }
+pre { background: #eee; padding: 1rem; overflow: auto; border-radius: 4px; }
+footer { margin-top: 3rem; font-size: 0.85rem; color: #666; }
