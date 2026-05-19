@@ -73,7 +73,7 @@ class ComplianceIssue:
 @dataclass
 class ComplianceReport:
     project_path: str
-    project_license: DetectedLicense | None
+    project_license: DetectedLicense | None = None
     dependencies: list[DependencyInfo] = field(default_factory=list)
     obligations: list[str] = field(default_factory=list)
     issues: list[ComplianceIssue] = field(default_factory=list)

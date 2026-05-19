@@ -10,6 +10,7 @@ from makeitcompliant.app.core.validation import ValidationError, read_license_fi
 from makeitcompliant.app.gui import session as app_session
 from makeitcompliant.app.gui import theme
 from makeitcompliant.app.gui.styles import body_font, header_font, subheader_font
+from makeitcompliant.app.gui.util import find_main_frame
 from makeitcompliant.app.gui.widgets import (
     CardPanel,
     FieldLabel,
@@ -96,6 +97,10 @@ class UploadPanel(wx.Panel):
         app_session.session.add(uploaded.name, uploaded.value)
         self._refresh_chips()
         self.file_path.SetValue("")
+        frame = find_main_frame(self)
+        if frame is not None and hasattr(frame, "SetStatusText"):
+            n = len(app_session.session.files)
+            frame.SetStatusText(f"Imported: {uploaded.name} ({n} in session)")
 
 
 class SimilarityPanel(wx.Panel):
@@ -117,7 +122,8 @@ class SimilarityPanel(wx.Panel):
         names = [f.name for f in app_session.session.files]
         files_label = ", ".join(names) if names else "(none yet)"
         card.add(FieldLabel(card, "Files in session"), 0, wx.BOTTOM, theme.PADDING_SM)
-        card.add(MutedLabel(card, files_label), 0, wx.BOTTOM, theme.PADDING)
+        self._files_label = MutedLabel(card, files_label)
+        card.add(self._files_label, 0, wx.BOTTOM, theme.PADDING)
 
         btn_row = wx.BoxSizer(wx.HORIZONTAL)
         cosine_btn = wx.Button(card, label="Cosine")
@@ -140,6 +146,12 @@ class SimilarityPanel(wx.Panel):
 
         root.Add(card, 1, wx.EXPAND | wx.ALL, theme.PADDING)
         self.SetSizer(root)
+
+    def refresh(self) -> None:
+        """Update file list after uploads."""
+        names = [f.name for f in app_session.session.files]
+        empty = "(none yet — upload licenses first)"
+        self._files_label.SetLabel(", ".join(names) if names else empty)
 
     def _require_two_files(self) -> tuple[str, str] | None:
         files = app_session.session.files
@@ -194,9 +206,8 @@ class ConditionsPanel(wx.ScrolledWindow):
         theme.apply_app_background(self)
         self.SetScrollRate(0, 12)
 
-        frame = self.GetParent()
-        assert hasattr(frame, "get_license_pair_analysis")
-        analysis = frame.get_license_pair_analysis()  # type: ignore[attr-defined]
+        main = find_main_frame(self)
+        analysis = main.get_license_pair_analysis() if main else False
 
         root = wx.BoxSizer(wx.VERTICAL)
         root.Add(
@@ -209,13 +220,23 @@ class ConditionsPanel(wx.ScrolledWindow):
             wx.EXPAND,
         )
 
-        if analysis is False:
-            wx.MessageBox(
-                "Upload two license files before opening Conditions.",
-                "Conditions",
-                wx.OK | wx.ICON_WARNING,
+        if analysis is False or main is None:
+            err = wx.BoxSizer(wx.VERTICAL)
+            err.Add(
+                SectionHeader(self, "License conditions", "Upload two licenses to continue."),
+                0,
+                wx.EXPAND,
             )
-            self.SetSizer(wx.BoxSizer())
+            card = CardPanel(self)
+            card.add(
+                MutedLabel(card, "Import two license files on the Upload page, then return here."),
+                0,
+                wx.ALL,
+                theme.PADDING,
+            )
+            err.Add(card, 1, wx.EXPAND | wx.ALL, theme.PADDING)
+            self.SetSizer(err)
+            self.FitInside()
             return
 
         compat_card = CardPanel(self)

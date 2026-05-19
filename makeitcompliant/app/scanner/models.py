@@ -48,7 +48,7 @@ class LicenseConflict:
 @dataclass
 class ProjectComplianceReport:
     project_path: str
-    project_license: LicenseFinding | None
+    project_license: LicenseFinding | None = None
     dependency_licenses: list[LicenseFinding] = field(default_factory=list)
     unknown_licenses: list[LicenseFinding] = field(default_factory=list)
     conflicts: list[LicenseConflict] = field(default_factory=list)

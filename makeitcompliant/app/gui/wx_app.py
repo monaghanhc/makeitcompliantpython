@@ -22,8 +22,8 @@ NAV_ITEMS = (
 
 class MainFrame(wx.Frame):
     def __init__(self) -> None:
-        super().__init__(None, -1, APP_TITLE, size=(1024, 720))
-        self.SetMinSize((880, 600))
+        super().__init__(None, -1, APP_TITLE, size=(1080, 760))
+        self.SetMinSize((920, 640))
         theme.apply_app_background(self)
         self.CreateStatusBar()
 
@@ -42,10 +42,9 @@ class MainFrame(wx.Frame):
     def _build_chrome(self) -> None:
         root = wx.BoxSizer(wx.HORIZONTAL)
 
-        # Sidebar
         nav = wx.Panel(self)
         theme.apply_nav(nav)
-        nav.SetMinSize((220, -1))
+        nav.SetMinSize((232, -1))
         nav_sizer = wx.BoxSizer(wx.VERTICAL)
 
         brand = wx.StaticText(nav, label=APP_TITLE)
@@ -54,14 +53,14 @@ class MainFrame(wx.Frame):
         tag = wx.StaticText(nav, label=APP_TAGLINE)
         tag.SetFont(body_font())
         tag.SetForegroundColour(theme.FG_NAV_DIM)
-        tag.Wrap(190)
+        tag.Wrap(200)
 
         nav_sizer.Add(brand, 0, wx.ALL, theme.PADDING)
         nav_sizer.Add(tag, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, theme.PADDING)
         nav_sizer.Add(wx.StaticLine(nav), 0, wx.EXPAND | wx.LEFT | wx.RIGHT, theme.PADDING_SM)
 
         for key, label in NAV_ITEMS:
-            btn = wx.Button(nav, label=f"  {label}", size=(200, 40), style=wx.BORDER_NONE)
+            btn = wx.Button(nav, label=f"  {label}", size=(208, 44), style=wx.BORDER_NONE)
             btn.Bind(wx.EVT_BUTTON, lambda e, k=key: self.show_panel(k))
             self._nav_buttons[key] = btn
             nav_sizer.Add(btn, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 6)
@@ -69,7 +68,6 @@ class MainFrame(wx.Frame):
         nav_sizer.AddStretchSpacer()
         nav.SetSizer(nav_sizer)
 
-        # Content
         content_wrap = wx.Panel(self)
         theme.apply_app_background(content_wrap)
         content_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -116,6 +114,20 @@ class MainFrame(wx.Frame):
         for key, btn in self._nav_buttons.items():
             theme.style_nav_button(btn, active=(key == name))
 
+    def _hide_all_panels(self) -> None:
+        self.upload_panel.Hide()
+        self.similarity_panel.Hide()
+        self.project_scan_panel.Hide()
+        if self.conditions_panel is not None:
+            self.conditions_panel.Hide()
+
+    def _destroy_conditions_panel(self) -> None:
+        if self.conditions_panel is None:
+            return
+        self._panel_sizer.Detach(self.conditions_panel)
+        self.conditions_panel.Destroy()
+        self.conditions_panel = None
+
     def show_panel(self, name: str) -> None:
         if name == "conditions" and len(app_session.session.files) < 2:
             wx.MessageBox(
@@ -125,27 +137,24 @@ class MainFrame(wx.Frame):
             )
             name = "upload"
 
-        self.upload_panel.Hide()
-        self.similarity_panel.Hide()
-        self.project_scan_panel.Hide()
-        if self.conditions_panel is not None:
-            self.conditions_panel.Hide()
+        self._hide_all_panels()
 
         if name == "upload":
             self.upload_panel.Show(True)
+            self.SetStatusText("Import license text files to begin.")
         elif name == "project":
             self.project_scan_panel.Show(True)
+            self.SetStatusText("Select a project folder and run compliance analysis.")
         elif name == "similarity":
-            self.similarity_panel.Destroy()
-            self.similarity_panel = SimilarityPanel(self._content_area)
-            self._panel_sizer.Add(self.similarity_panel, 1, wx.EXPAND)
+            self.similarity_panel.refresh()
             self.similarity_panel.Show(True)
+            self.SetStatusText("Compare metrics or run ML + Prolog analysis.")
         elif name == "conditions":
-            if self.conditions_panel is not None:
-                self.conditions_panel.Destroy()
+            self._destroy_conditions_panel()
             self.conditions_panel = ConditionsPanel(self._content_area)
             self._panel_sizer.Add(self.conditions_panel, 1, wx.EXPAND)
             self.conditions_panel.Show(True)
+            self.SetStatusText("License permissions and cross-license compatibility.")
 
         self._set_nav_active(name)
         self.Layout()
@@ -168,7 +177,7 @@ def main() -> None:
     if status.available:
         frame.SetStatusText(status.version_line or "SWI-Prolog ready")
     else:
-        frame.SetStatusText("SWI-Prolog not found — install for full analysis")
+        frame.SetStatusText("SWI-Prolog not found — ML detection still works")
         wx.MessageBox(
             status.message + "\n\nML license detection will still work.",
             APP_TITLE,

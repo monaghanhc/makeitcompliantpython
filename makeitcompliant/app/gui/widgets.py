@@ -37,13 +37,19 @@ class SectionHeader(wx.Panel):
 
 
 class CardPanel(wx.Panel):
-    """White card with padding for form content."""
+    """White card with bordered frame and padding."""
 
     def __init__(self, parent: wx.Window) -> None:
         super().__init__(parent)
         theme.apply_card(self)
+        box = wx.StaticBox(self)
+        box.SetForegroundColour(theme.BORDER)
+        outer = wx.StaticBoxSizer(box, wx.VERTICAL)
         self._inner = wx.BoxSizer(wx.VERTICAL)
-        self.SetSizer(self._inner)
+        outer.Add(self._inner, 1, wx.EXPAND | wx.ALL, theme.PADDING)
+        wrap = wx.BoxSizer(wx.VERTICAL)
+        wrap.Add(outer, 1, wx.EXPAND | wx.ALL, 4)
+        self.SetSizer(wrap)
 
     def add(self, window: wx.Window, proportion: int = 0, flag: int = 0, border: int = 0) -> None:
         self._inner.Add(window, proportion, flag, border)

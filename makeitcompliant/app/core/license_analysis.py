@@ -35,9 +35,9 @@ class LicenseSideAnalysis:
 class PairComplianceAnalysis:
     license_a: LicenseSideAnalysis
     license_b: LicenseSideAnalysis
-    cross_compatible: bool | None
-    cross_risk: str | None
-    cross_explanation: str | None
+    cross_compatible: bool | None = None
+    cross_risk: str | None = None
+    cross_explanation: str | None = None
     cross_conflict_reasons: list[str] = field(default_factory=list)
     obligations: list[str] = field(default_factory=list)
     prolog_available: bool = False
@@ -91,18 +91,28 @@ def analyze_license_pair(text_a: str, text_b: str) -> PairComplianceAnalysis:
     )
 
     if status.available:
-        try:
-            legacy = PrologEngine()
-            side_a.permissions = _describe_list(legacy.permissions_for_a())
-            side_b.permissions = _describe_list(legacy.permissions_for_b())
-            side_a.distribution_conditions = _describe_list(legacy.conditions_distribution_a())
-            side_b.distribution_conditions = _describe_list(legacy.conditions_distribution_b())
-            side_a.modification_conditions = _describe_list(legacy.conditions_modification_a())
-            side_b.modification_conditions = _describe_list(legacy.conditions_modification_b())
-            side_a.limitations = _describe_list(legacy.limitations_a())
-            side_b.limitations = _describe_list(legacy.limitations_b())
-        except PrologEngineError as exc:
-            logger.warning("Legacy Prolog KB: %s", exc)
+        # Legacy KB uses human-readable license names; skip when ML returned unknown.
+        if side_a.atom != "unknown" and side_b.atom != "unknown":
+            try:
+                legacy = PrologEngine()
+                side_a.permissions = _describe_list(legacy.permissions_for_a())
+                side_b.permissions = _describe_list(legacy.permissions_for_b())
+                side_a.distribution_conditions = _describe_list(
+                    legacy.conditions_distribution_a()
+                )
+                side_b.distribution_conditions = _describe_list(
+                    legacy.conditions_distribution_b()
+                )
+                side_a.modification_conditions = _describe_list(
+                    legacy.conditions_modification_a()
+                )
+                side_b.modification_conditions = _describe_list(
+                    legacy.conditions_modification_b()
+                )
+                side_a.limitations = _describe_list(legacy.limitations_a())
+                side_b.limitations = _describe_list(legacy.limitations_b())
+            except PrologEngineError as exc:
+                logger.warning("Legacy Prolog KB: %s", exc)
 
         try:
             reasoner = ComplianceReasoningEngine()
