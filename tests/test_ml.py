@@ -5,6 +5,7 @@ import pytest
 from makeitcompliant.app.core.license_models import normalize_template_name_to_prolog
 from makeitcompliant.app.ml.classifier import LicenseClassifier
 from makeitcompliant.app.ml.features import cosine_similarity, jaccard_similarity
+from makeitcompliant.app.ml.similarity import best_template_score, rank_templates
 from makeitcompliant.app.prolog.facts_loader import write_runtime_facts
 from makeitcompliant.app.utils.paths import get_resource_root
 
@@ -25,6 +26,19 @@ def test_cosine_identical_text() -> None:
 def test_jaccard_identical_text() -> None:
     text = "alpha beta gamma"
     assert jaccard_similarity(text, text) == pytest.approx(1.0)
+
+
+def test_batch_tfidf_ranks_mit_high() -> None:
+    mit_path = get_resource_root() / "MIT-License.txt"
+    if not mit_path.is_file():
+        pytest.skip("MIT-License.txt not in repo root")
+    text = mit_path.read_text(encoding="utf-8")
+    best = best_template_score(text)
+    assert best is not None
+    assert best.score > 0.5
+    top = rank_templates(text, top_n=3)
+    assert len(top) >= 1
+    assert top[0].score >= best.score
 
 
 def test_classify_mit_license_sample() -> None:

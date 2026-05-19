@@ -72,12 +72,15 @@ class SimilarityPanel(wx.Panel):
 
         cosine_btn = wx.Button(self, -1, "Cosine Sim")
         jaccard_btn = wx.Button(self, -1, "Jaccard Sim")
+        analyze_btn = wx.Button(self, -1, "ML + Prolog Analyze")
         cosine_btn.Bind(wx.EVT_BUTTON, self.on_cosine)
         jaccard_btn.Bind(wx.EVT_BUTTON, self.on_jaccard)
+        analyze_btn.Bind(wx.EVT_BUTTON, self.on_full_analyze)
 
         btn_row = wx.BoxSizer(wx.HORIZONTAL)
-        btn_row.Add(cosine_btn, 0, 0, 0)
-        btn_row.Add(jaccard_btn, 0, 0, 0)
+        btn_row.Add(cosine_btn, 0, wx.RIGHT, 4)
+        btn_row.Add(jaccard_btn, 0, wx.RIGHT, 4)
+        btn_row.Add(analyze_btn, 0, 0, 0)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.files_to_compare, 0, 0, 0)
@@ -110,6 +113,22 @@ class SimilarityPanel(wx.Panel):
         score = fc.jaccard_similarity(pair[0], pair[1]) * 100
         self.comparison_results.SetValue(f"Jaccard Similarity: {score:.2f} %")
 
+    def on_full_analyze(self, event: wx.CommandEvent) -> None:
+        pair = self._require_two_files()
+        if not pair:
+            return
+        from makeitcompliant.app.core.license_analysis import analyze_license_pair
+
+        analysis = analyze_license_pair(pair[0], pair[1])
+        lines = [
+            f"License A: {analysis.license_a.display_name} "
+            f"({analysis.license_a.confidence:.0%}, {analysis.license_a.detection_method})",
+            f"License B: {analysis.license_b.display_name} "
+            f"({analysis.license_b.confidence:.0%}, {analysis.license_b.detection_method})",
+            ConditionsPanel._compat_summary(analysis),
+        ]
+        self.comparison_results.SetValue("\n".join(lines))
+
 
 class ConditionsPanel(wx.Panel):
     def __init__(self, parent: wx.Window) -> None:
@@ -118,10 +137,10 @@ class ConditionsPanel(wx.Panel):
         body = body_font()
 
         frame = self.GetParent()
-        assert hasattr(frame, "get_classified_files")
-        files = frame.get_classified_files()  # type: ignore[attr-defined]
+        assert hasattr(frame, "get_license_pair_analysis")
+        analysis = frame.get_license_pair_analysis()  # type: ignore[attr-defined]
 
-        if files is False:
+        if analysis is False:
             wx.MessageBox(
                 "Upload two license files before opening the Conditions page.",
                 "Conditions",
@@ -130,28 +149,24 @@ class ConditionsPanel(wx.Panel):
             self.SetSizer(wx.BoxSizer())
             return
 
-        permissions = fc.get_permissions()
-        d_conditions = fc.get_conditions_for_distribution()
-        m_conditions = fc.get_conditions_for_modification()
-        limitations = fc.get_limitations()
-
+        a, b = analysis.license_a, analysis.license_b
         file_a_box = self._license_column(
             self,
-            files[0],
-            _safe_list(permissions[0]),
-            _safe_list(d_conditions[0]),
-            _safe_list(m_conditions[0]),
-            _safe_list(limitations[0]),
+            f"{a.display_name} ({a.confidence:.0%} ML)",
+            a.permissions,
+            a.distribution_conditions,
+            a.modification_conditions,
+            a.limitations,
             header,
             body,
         )
         file_b_box = self._license_column(
             self,
-            files[1],
-            _safe_list(permissions[1]),
-            _safe_list(d_conditions[1]),
-            _safe_list(m_conditions[1]),
-            _safe_list(limitations[1]),
+            f"{b.display_name} ({b.confidence:.0%} ML)",
+            b.permissions,
+            b.distribution_conditions,
+            b.modification_conditions,
+            b.limitations,
             header,
             body,
         )
@@ -161,6 +176,19 @@ class ConditionsPanel(wx.Panel):
         row.Add(file_b_box, 0, flag=wx.LEFT | wx.RIGHT, border=20)
 
         root = wx.BoxSizer(wx.VERTICAL)
+        compat = wx.StaticText(self, label=self._compat_summary(analysis))
+        compat.SetFont(body)
+        compat.Wrap(700)
+        root.Add(compat, 0, wx.ALL, 8)
+        if analysis.obligations:
+            obl = wx.StaticText(
+                self,
+                label="Combined obligations (Prolog): "
+                + "; ".join(analysis.obligations[:6]),
+            )
+            obl.SetFont(body)
+            obl.Wrap(700)
+            root.Add(obl, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
         root.Add(row)
         console_btn = wx.Button(self, label="Prolog Console")
         console_btn.Bind(wx.EVT_BUTTON, self.on_open_console)
@@ -230,6 +258,16 @@ class ConditionsPanel(wx.Panel):
                 col.Add(line)
 
         return col
+
+    @staticmethod
+    def _compat_summary(analysis) -> str:
+        if not analysis.prolog_available:
+            return f"Prolog: {analysis.prolog_message}"
+        compat = "yes" if analysis.cross_compatible else "no"
+        return (
+            f"Cross-license (SWI-Prolog): compatible={compat}, risk={analysis.cross_risk}. "
+            f"{analysis.cross_explanation or ''}"
+        )
 
     def on_open_console(self, event: wx.CommandEvent) -> None:
         PrologConsoleFrame()

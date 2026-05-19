@@ -10,8 +10,9 @@ from makeitcompliant.app.core.compliance_models import (
     confidence_tier_for,
 )
 from makeitcompliant.app.core.license_registry import atom_to_display
-from makeitcompliant.app.ml.features import cosine_similarity, normalize_license_text
+from makeitcompliant.app.ml.features import normalize_license_text
 from makeitcompliant.app.ml.model_cache import TemplateEntry, load_template_cache
+from makeitcompliant.app.ml.similarity import best_template_score, rank_templates
 from makeitcompliant.app.ml.spdx_detector import detect_spdx_in_text
 from makeitcompliant.app.utils.logging_config import get_logger
 
@@ -75,17 +76,12 @@ class LicenseDetector:
         if not normalized.strip():
             return self._unknown(source, "Empty license text")
 
-        best_score = -1.0
-        best: TemplateEntry | None = None
-        for entry in self.templates:
-            score = cosine_similarity(normalized, entry.text)
-            if score > best_score:
-                best_score = score
-                best = entry
-
+        best = best_template_score(normalized)
         if best is None:
             return self._unknown(source, "No templates loaded")
 
+        entry = best.entry
+        best_score = best.score
         tier = confidence_tier_for(best_score)
         if best_score < self._medium_threshold:
             return DetectionResult(
@@ -94,25 +90,46 @@ class LicenseDetector:
                     source=source,
                     confidence=best_score,
                     detection_method="tfidf_low_confidence",
-                    matched_text=best.filename,
+                    matched_text=entry.filename,
                     confidence_tier=ConfidenceTier.UNKNOWN,
                     display_name="Unknown (needs review)",
                 ),
-                template_filename=best.filename,
+                template_filename=entry.filename,
             )
 
         return DetectionResult(
             license=DetectedLicense(
-                identifier=best.prolog_atom,
+                identifier=entry.prolog_atom,
                 source=source,
                 confidence=best_score,
                 detection_method="tfidf",
-                matched_text=best.filename,
+                matched_text=entry.filename,
                 confidence_tier=tier,
-                display_name=atom_to_display(best.prolog_atom),
+                display_name=atom_to_display(entry.prolog_atom),
             ),
-            template_filename=best.filename,
+            template_filename=entry.filename,
         )
+
+    def rank(self, text: str, top_n: int = 5) -> list[DetectionResult]:
+        """Return top-N template matches (explainability / review UI)."""
+        normalized = normalize_license_text(text[:500_000])
+        results: list[DetectionResult] = []
+        for scored in rank_templates(normalized, top_n=top_n):
+            results.append(
+                DetectionResult(
+                    license=DetectedLicense(
+                        identifier=scored.entry.prolog_atom,
+                        source="rank",
+                        confidence=scored.score,
+                        detection_method="tfidf_rank",
+                        matched_text=scored.entry.filename,
+                        confidence_tier=confidence_tier_for(scored.score),
+                        display_name=atom_to_display(scored.entry.prolog_atom),
+                    ),
+                    template_filename=scored.entry.filename,
+                )
+            )
+        return results
 
     def _unknown(self, source: str, reason: str) -> DetectionResult:
         return DetectionResult(

@@ -1,8 +1,9 @@
 # Make It Compliant
 
-Software license compliance assistant for project folders: **ML license detection**, **SWI-Prolog rule reasoning**, and **explainable reports**.
+**Free & open source (MIT)** — software license compliance for project folders: **ML license detection**, **SWI-Prolog rule reasoning**, and **explainable reports**. No subscription, no cloud required for the desktop engine.
 
-[Repository](https://github.com/monaghanhc/makeitcompliantpython)
+- **Live site (demo):** [https://monaghanhc.github.io/makeitcompliantpython/](https://monaghanhc.github.io/makeitcompliantpython/)
+- **Repository:** [github.com/monaghanhc/makeitcompliantpython](https://github.com/monaghanhc/makeitcompliantpython)
 
 ## Features
 
@@ -11,7 +12,8 @@ Software license compliance assistant for project folders: **ML license detectio
 - **Prolog engine** — families, obligations, compatibility, `risk_level/3`, `analyze_project/3`, `explain_incompatibility/3`
 - **Reports** — issues with recommendations; export **JSON** and **Markdown**
 - **Desktop UI** (wxPython) — upload/compare licenses, project scan, Prolog console
-- **GitHub Pages** — landing + SPDX browser demo (full engine is desktop-only)
+- **GitHub Pages** — live landing + SPDX/heuristic browser demo (full ML + Prolog is desktop-only)
+- **CI** — pytest + optional SWI-Prolog plunit on every push to `main`
 
 ## Quick start
 

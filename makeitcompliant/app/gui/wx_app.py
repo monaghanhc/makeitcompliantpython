@@ -4,17 +4,18 @@ from __future__ import annotations
 
 import wx
 
-from makeitcompliant.app.core import file_comparison as fc
 from makeitcompliant.app.gui import session as app_session
 from makeitcompliant.app.gui.components import ConditionsPanel, SimilarityPanel, UploadPanel
 from makeitcompliant.app.gui.project_scan_panel import ProjectScanPanel
 from makeitcompliant.app.gui.styles import APP_TITLE
+from makeitcompliant.app.prolog.runtime import check_prolog
 from makeitcompliant.app.utils.logging_config import setup_logging
 
 
 class MainFrame(wx.Frame):
     def __init__(self) -> None:
         super().__init__(None, -1, APP_TITLE, size=(720, 640))
+        self.CreateStatusBar()
 
         self.upload_panel = UploadPanel(self)
         self.similarity_panel = SimilarityPanel(self)
@@ -103,18 +104,30 @@ class MainFrame(wx.Frame):
 
         self.Layout()
 
-    def get_classified_files(self) -> list[str] | False:
+    def get_license_pair_analysis(self):
+        from makeitcompliant.app.core.license_analysis import analyze_license_pair
+
         files = app_session.session.files
         if len(files) < 2:
             return False
-        return fc.classify_two_files(files[0].value, files[1].value)
+        return analyze_license_pair(files[0].value, files[1].value)
 
 
 def main() -> None:
     setup_logging()
     app = wx.App()
+    status = check_prolog()
     frame = MainFrame()
     frame.Show(True)
+    if status.available:
+        frame.SetStatusText(status.version_line or "SWI-Prolog ready")
+    else:
+        frame.SetStatusText("SWI-Prolog not found — install for full analysis")
+        wx.MessageBox(
+            status.message + "\n\nML license detection will still work.",
+            APP_TITLE,
+            wx.OK | wx.ICON_INFORMATION,
+        )
     app.MainLoop()
 
 

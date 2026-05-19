@@ -3,16 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Make It Compliant</title>
+  <title>Make It Compliant — Free & Open Source</title>
+  <meta name="description" content="Free software license compliance: ML detection + SWI-Prolog reasoning" />
   <link rel="stylesheet" href="site.css" />
 </head>
 <body>
   <header>
+    <p class="badge">100% free &amp; open source (MIT)</p>
     <h1>Make It Compliant</h1>
-    <p class="tagline">Software license compliance analysis — ML detection + Prolog reasoning</p>
+    <p class="tagline">ML license detection + SWI-Prolog rule engine — no subscription, no cloud required</p>
     <nav>
-      <a href="#features">Features</a>
-      <a href="#demo">SPDX Demo</a>
+      <a href="#live">Live demo</a>
+      <a href="#stack">Tech stack</a>
       <a href="#desktop">Desktop app</a>
       <a href="https://github.com/monaghanhc/makeitcompliantpython">GitHub</a>
     </nav>
@@ -20,40 +22,67 @@
 
   <main>
     <section class="hero">
-      <h2>Understand licenses before you ship</h2>
-      <p>Scan projects, classify license text, reason over compatibility with SWI-Prolog, and export compliance reports.</p>
-      <p class="note"><strong>GitHub Pages demo:</strong> client-side SPDX detection only. Full analysis requires the desktop app (Python + SWI-Prolog).</p>
+      <h2>Compliance analysis you can run locally</h2>
+      <p>
+        Scan entire projects, classify licenses with TF-IDF + SPDX, and reason over
+        compatibility, obligations, and risk with <strong>SWI-Prolog</strong> — entirely on your machine.
+      </p>
+      <p class="live-url">
+        <strong>Live site:</strong>
+        <a href="https://monaghanhc.github.io/makeitcompliantpython/">monaghanhc.github.io/makeitcompliantpython</a>
+      </p>
     </section>
 
-    <section id="features">
-      <h2>Features</h2>
-      <ul>
-        <li>Project folder scanner (LICENSE, manifests, headers)</li>
-        <li>TF-IDF + SPDX license detection with confidence tiers</li>
-        <li>Prolog rules: families, obligations, compatibility, risk</li>
-        <li>Explainable issues and recommendations</li>
-        <li>JSON / Markdown report export</li>
-      </ul>
+    <section id="stack">
+      <h2>Built for ML + Prolog together</h2>
+      <div class="cards">
+        <article>
+          <h3>ML (local)</h3>
+          <ul>
+            <li>SPDX identifier detection (fast path)</li>
+            <li>Batch TF-IDF vs 45+ license templates</li>
+            <li>Confidence tiers: high / medium / unknown</li>
+          </ul>
+        </article>
+        <article>
+          <h3>SWI-Prolog (free)</h3>
+          <ul>
+            <li><code>analyze_dependency/3</code></li>
+            <li><code>analyze_project/3</code></li>
+            <li><code>explain_incompatibility/3</code></li>
+            <li><code>required_obligations/3</code></li>
+          </ul>
+        </article>
+      </div>
     </section>
 
-    <section id="demo">
-      <h2>SPDX demo (browser)</h2>
-      <p>Paste license text or an SPDX line:</p>
-      <textarea id="licenseInput" rows="8" placeholder="SPDX-License-Identifier: MIT"></textarea>
-      <button id="detectBtn">Detect license</button>
-      <pre id="demoResult"></pre>
+    <section id="live">
+      <h2>Browser demo (SPDX + heuristics)</h2>
+      <p class="note">
+        This page cannot run Python or SWI-Prolog. The demo uses client-side patterns only.
+        Download the desktop app for full ML + Prolog analysis.
+      </p>
+      <label>License A</label>
+      <textarea id="licenseInput" rows="6" placeholder="SPDX-License-Identifier: MIT"></textarea>
+      <label>License B (optional — compatibility hint)</label>
+      <textarea id="licenseInputB" rows="4" placeholder="SPDX-License-Identifier: GPL-3.0-only"></textarea>
+      <button id="detectBtn" type="button">Analyze in browser</button>
+      <pre id="demoResult" aria-live="polite"></pre>
     </section>
 
     <section id="desktop">
-      <h2>Full desktop analysis</h2>
-      <pre><code>pip install -r requirements.txt
+      <h2>Full power: free desktop app</h2>
+      <pre><code>git clone https://github.com/monaghanhc/makeitcompliantpython.git
+cd makeitcompliantpython
+pip install -r requirements.txt
+# Install free SWI-Prolog: https://www.swi-prolog.org/download/stable
 python -m makeitcompliant.app.main</code></pre>
-      <p>Build Windows .exe: <code>.\scripts\build_windows.ps1</code></p>
+      <p>Windows .exe: <code>.\scripts\build_windows.ps1</code></p>
     </section>
   </main>
 
   <footer>
-    <p>Automated assistance only — not legal advice.</p>
+    <p>Automated assistance only — not legal advice. MIT licensed.</p>
   </footer>
   <script src="demo.js"></script>
 </body>
