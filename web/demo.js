@@ -10,28 +10,24 @@ const RULES = [
     label: "MIT License (permissive)",
     family: "permissive",
     patterns: [/SPDX-License-Identifier:\s*MIT/i, /\bMIT License\b/i],
-    compat: { gpl: "high risk", apache: "low" },
   },
   {
     id: "Apache-2.0",
     label: "Apache License 2.0 (permissive)",
     family: "permissive",
     patterns: [/SPDX-License-Identifier:\s*Apache-2\.0/i, /Apache License.*2\.0/i],
-    compat: { mit: "low", gpl: "high" },
   },
   {
     id: "GPL-3.0",
     label: "GPL-3.0 (strong copyleft)",
     family: "strong_copyleft",
     patterns: [/SPDX-License-Identifier:\s*GPL-3\.0/i, /GNU GENERAL PUBLIC LICENSE.*Version 3/i],
-    compat: { mit: "high", proprietary: "critical" },
   },
   {
     id: "AGPL-3.0",
     label: "AGPL-3.0 (network copyleft)",
     family: "strong_copyleft",
     patterns: [/SPDX-License-Identifier:\s*AGPL-3\.0/i, /Affero General Public License/i],
-    compat: { mit: "high", saas: "review network obligations" },
   },
 ];
 
@@ -43,11 +39,11 @@ function detectLicense(text) {
       }
     }
   }
-  const spdx = text.match(SPDX_RE);
-  if (spdx) {
+  const spdx = [...text.matchAll(SPDX_RE)];
+  if (spdx.length) {
     return {
-      id: spdx[1],
-      label: `SPDX ${spdx[1]}`,
+      id: spdx[0][1],
+      label: "SPDX " + spdx[0][1],
       family: "see desktop app",
       confidence: "high",
       method: "spdx",
@@ -78,32 +74,58 @@ function prologStyleNote(a, b) {
   return "See desktop SWI-Prolog engine for analyze_dependency/2.";
 }
 
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function row(label, value, valueClass) {
+  const cls = valueClass ? ' class="' + valueClass + '"' : "";
+  return (
+    '<p class="result-row"><span>' +
+    esc(label) +
+    "</span><span" +
+    cls +
+    ">" +
+    esc(value) +
+    "</span></p>"
+  );
+}
+
+function licenseBlock(title, lic) {
+  const confClass = lic.confidence === "high" ? "confidence-high" : "confidence-low";
+  const parts = [
+    '<section class="result-block">',
+    "<h4>" + esc(title) + "</h4>",
+    row("License", lic.label),
+    row("SPDX / ID", lic.id),
+    row("Family", lic.family),
+    row("Confidence", lic.confidence, confClass),
+    row("Method", lic.method),
+    "</section>",
+  ];
+  return parts.join("");
+}
+
 document.getElementById("detectBtn").addEventListener("click", () => {
   const text = document.getElementById("licenseInput").value;
   const textB = document.getElementById("licenseInputB").value;
   const out = document.getElementById("demoResult");
   const a = detectLicense(text);
   const b = textB.trim() ? detectLicense(textB) : null;
-  let msg = [
-    "=== License A ===",
-    `ID: ${a.id}`,
-    `Label: ${a.label}`,
-    `Family: ${a.family}`,
-    `Confidence: ${a.confidence}`,
-    `Method: ${a.method}`,
-  ];
+
+  let html = licenseBlock("License A", a);
   if (b) {
-    msg = msg.concat([
-      "",
-      "=== License B ===",
-      `ID: ${b.id}`,
-      `Label: ${b.label}`,
-      `Family: ${b.family}`,
-      "",
-      "=== Prolog-style compatibility (demo) ===",
-      prologStyleNote(a, b),
-    ]);
+    html += licenseBlock("License B", b);
+    html +=
+      '<section class="result-block"><h4>Compatibility (demo)</h4>' +
+      '<p class="compat-note">' +
+      esc(prologStyleNote(a, b)) +
+      "</p></section>";
   }
-  msg.push("", "100% free & open source (MIT). Full analysis: desktop + SWI-Prolog.");
-  out.textContent = msg.join("\n");
+  html +=
+    '<p class="footnote" style="margin-top:1rem">100% free &amp; open source (MIT). ' +
+    "Full analysis: desktop + SWI-Prolog.</p>";
+  out.innerHTML = html;
 });

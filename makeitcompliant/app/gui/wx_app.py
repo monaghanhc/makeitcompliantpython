@@ -5,72 +5,126 @@ from __future__ import annotations
 import wx
 
 from makeitcompliant.app.gui import session as app_session
+from makeitcompliant.app.gui import theme
 from makeitcompliant.app.gui.components import ConditionsPanel, SimilarityPanel, UploadPanel
 from makeitcompliant.app.gui.project_scan_panel import ProjectScanPanel
-from makeitcompliant.app.gui.styles import APP_TITLE
+from makeitcompliant.app.gui.styles import APP_TAGLINE, APP_TITLE, body_font, title_font
 from makeitcompliant.app.prolog.runtime import check_prolog
 from makeitcompliant.app.utils.logging_config import setup_logging
+
+NAV_ITEMS = (
+    ("upload", "Upload licenses"),
+    ("similarity", "Compare"),
+    ("conditions", "Conditions"),
+    ("project", "Project scan"),
+)
 
 
 class MainFrame(wx.Frame):
     def __init__(self) -> None:
-        super().__init__(None, -1, APP_TITLE, size=(720, 640))
+        super().__init__(None, -1, APP_TITLE, size=(1024, 720))
+        self.SetMinSize((880, 600))
+        theme.apply_app_background(self)
         self.CreateStatusBar()
 
-        self.upload_panel = UploadPanel(self)
-        self.similarity_panel = SimilarityPanel(self)
-        self.project_scan_panel = ProjectScanPanel(self)
         self.conditions_panel: ConditionsPanel | None = None
+        self._nav_buttons: dict[str, wx.Button] = {}
+        self._active = "upload"
 
-        self.similarity_panel.Hide()
-        self.project_scan_panel.Hide()
+        self._build_chrome()
+        self.upload_panel = UploadPanel(self._content_area)
+        self.similarity_panel = SimilarityPanel(self._content_area)
+        self.project_scan_panel = ProjectScanPanel(self._content_area)
+        self._build_panels()
+        self._build_menu()
+        self.show_panel("upload")
 
-        self.root_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.root_sizer.Add(self.upload_panel, 1, wx.EXPAND)
-        self.root_sizer.Add(self.similarity_panel, 1, wx.EXPAND)
-        self.root_sizer.Add(self.project_scan_panel, 1, wx.EXPAND)
-        self.SetSizer(self.root_sizer)
+    def _build_chrome(self) -> None:
+        root = wx.BoxSizer(wx.HORIZONTAL)
 
+        # Sidebar
+        nav = wx.Panel(self)
+        theme.apply_nav(nav)
+        nav.SetMinSize((220, -1))
+        nav_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        brand = wx.StaticText(nav, label=APP_TITLE)
+        brand.SetFont(title_font())
+        brand.SetForegroundColour(theme.FG_NAV)
+        tag = wx.StaticText(nav, label=APP_TAGLINE)
+        tag.SetFont(body_font())
+        tag.SetForegroundColour(theme.FG_NAV_DIM)
+        tag.Wrap(190)
+
+        nav_sizer.Add(brand, 0, wx.ALL, theme.PADDING)
+        nav_sizer.Add(tag, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, theme.PADDING)
+        nav_sizer.Add(wx.StaticLine(nav), 0, wx.EXPAND | wx.LEFT | wx.RIGHT, theme.PADDING_SM)
+
+        for key, label in NAV_ITEMS:
+            btn = wx.Button(nav, label=f"  {label}", size=(200, 40), style=wx.BORDER_NONE)
+            btn.Bind(wx.EVT_BUTTON, lambda e, k=key: self.show_panel(k))
+            self._nav_buttons[key] = btn
+            nav_sizer.Add(btn, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 6)
+
+        nav_sizer.AddStretchSpacer()
+        nav.SetSizer(nav_sizer)
+
+        # Content
+        content_wrap = wx.Panel(self)
+        theme.apply_app_background(content_wrap)
+        content_sizer = wx.BoxSizer(wx.VERTICAL)
+        self._content_area = wx.Panel(content_wrap)
+        theme.apply_app_background(self._content_area)
+        content_sizer.Add(self._content_area, 1, wx.EXPAND | wx.ALL, theme.PADDING)
+        content_wrap.SetSizer(content_sizer)
+
+        root.Add(nav, 0, wx.EXPAND)
+        root.Add(content_wrap, 1, wx.EXPAND)
+        self.SetSizer(root)
+
+    def _build_panels(self) -> None:
+        self._panel_sizer = wx.BoxSizer(wx.VERTICAL)
+        self._content_area.SetSizer(self._panel_sizer)
+        for panel in (self.upload_panel, self.similarity_panel, self.project_scan_panel):
+            self._panel_sizer.Add(panel, 1, wx.EXPAND)
+
+    def _build_menu(self) -> None:
         menu_bar = wx.MenuBar()
         analyze_menu = wx.Menu()
-        analyze_menu.Append(wx.ID_ANY, "Scan Project Folder…", "Full project compliance scan")
+        analyze_menu.Append(wx.ID_ANY, "Scan Project Folder…")
         menu_bar.Append(analyze_menu, "&Analyze")
-
         view_menu = wx.Menu()
-        view_menu.Append(wx.ID_ANY, "Upload Licenses", "Upload license files")
-        view_menu.Append(wx.ID_ANY, "Compare Two Licenses", "Similarity metrics")
-        view_menu.Append(wx.ID_ANY, "License Conditions", "Permissions and obligations")
-        view_menu.Append(wx.ID_ANY, "Project Scanner", "Scan repository compliance")
+        for _, label in NAV_ITEMS:
+            view_menu.Append(wx.ID_ANY, label)
         menu_bar.Append(view_menu, "&View")
         self.SetMenuBar(menu_bar)
 
         self.Bind(
             wx.EVT_MENU,
             lambda e: self.show_panel("project"),
-            analyze_menu.FindItemByPosition(0),
+            id=analyze_menu.FindItemByPosition(0).GetId(),
         )
-        self.Bind(
-            wx.EVT_MENU,
-            lambda e: self.show_panel("upload"),
-            view_menu.FindItemByPosition(0),
-        )
-        self.Bind(
-            wx.EVT_MENU,
-            lambda e: self.show_panel("similarity"),
-            view_menu.FindItemByPosition(1),
-        )
-        self.Bind(
-            wx.EVT_MENU,
-            lambda e: self.show_panel("conditions"),
-            view_menu.FindItemByPosition(2),
-        )
-        self.Bind(
-            wx.EVT_MENU,
-            lambda e: self.show_panel("project"),
-            view_menu.FindItemByPosition(3),
-        )
+        for i, (key, _) in enumerate(NAV_ITEMS):
+            self.Bind(
+                wx.EVT_MENU,
+                lambda e, k=key: self.show_panel(k),
+                id=view_menu.FindItemByPosition(i).GetId(),
+            )
+
+    def _set_nav_active(self, name: str) -> None:
+        self._active = name
+        for key, btn in self._nav_buttons.items():
+            theme.style_nav_button(btn, active=(key == name))
 
     def show_panel(self, name: str) -> None:
+        if name == "conditions" and len(app_session.session.files) < 2:
+            wx.MessageBox(
+                "Upload two license files first (Upload licenses).",
+                APP_TITLE,
+                wx.OK | wx.ICON_WARNING,
+            )
+            name = "upload"
+
         self.upload_panel.Hide()
         self.similarity_panel.Hide()
         self.project_scan_panel.Hide()
@@ -83,25 +137,17 @@ class MainFrame(wx.Frame):
             self.project_scan_panel.Show(True)
         elif name == "similarity":
             self.similarity_panel.Destroy()
-            self.similarity_panel = SimilarityPanel(self)
-            self.root_sizer.Add(self.similarity_panel, 1, wx.EXPAND)
+            self.similarity_panel = SimilarityPanel(self._content_area)
+            self._panel_sizer.Add(self.similarity_panel, 1, wx.EXPAND)
             self.similarity_panel.Show(True)
         elif name == "conditions":
-            if len(app_session.session.files) < 2:
-                wx.MessageBox(
-                    "Upload two license files first.",
-                    APP_TITLE,
-                    wx.OK | wx.ICON_WARNING,
-                )
-                self.upload_panel.Show(True)
-                self.Layout()
-                return
             if self.conditions_panel is not None:
                 self.conditions_panel.Destroy()
-            self.conditions_panel = ConditionsPanel(self)
-            self.root_sizer.Add(self.conditions_panel, 1, wx.EXPAND)
+            self.conditions_panel = ConditionsPanel(self._content_area)
+            self._panel_sizer.Add(self.conditions_panel, 1, wx.EXPAND)
             self.conditions_panel.Show(True)
 
+        self._set_nav_active(name)
         self.Layout()
 
     def get_license_pair_analysis(self):
